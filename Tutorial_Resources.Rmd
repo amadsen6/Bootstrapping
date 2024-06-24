@@ -1,7 +1,14 @@
 ---
 title: "Bootstrap & MCMC Tutorial"
 output:   
+<<<<<<< HEAD
   github_document
+=======
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+>>>>>>> 09e6e28219c5773ed94e23251d27e9ee46cbdf93
 ---
 
 ```{r setup, include=FALSE}
