@@ -1,9 +1,16 @@
 ---
 title: "Bootstrap & MCMC Tutorial"
 output:   
+<<<<<<< HEAD
   pdf_document:
     toc: true
     toc_depth: 3
+=======
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+>>>>>>> af9e2441783fb9b758e74304b0916763a45c898f
 ---
 
 ```{r setup, include=FALSE}
