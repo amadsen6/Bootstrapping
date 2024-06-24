@@ -1,18 +1,13 @@
 ---
 title: "Bootstrap & MCMC Tutorial"
 output:   
-<<<<<<< HEAD
-  github_document
-=======
-  html_document:
+  pdf_document:
     toc: true
-    toc_float:
-      collapsed: false
->>>>>>> 09e6e28219c5773ed94e23251d27e9ee46cbdf93
+    toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE, tidy.opts=list(width.cutoff=80), tidy=TRUE)
 ```
 
 # Background
@@ -65,13 +60,16 @@ load("morn_visits.dat")
 head(morn_visits)
 
 ## Let's look at the distributions of our variables of interest
-hist(morn_visits$sumvisits) ## left-biased distribution, aka Poisson
+hist(morn_visits$sumvisits) 
+## left-biased distribution, aka Poisson
 mean(morn_visits$sumvisits)
 
-hist(morn_visits$nightlows) ## fairly Gaussian, but not perfect, may need to rescale if model fit is off
+hist(morn_visits$nightlows) 
+## fairly Gaussian, but not perfect, may need to rescale if model fit is off
 mean(morn_visits$nightlows)
 
-hist(morn_visits$Date, breaks = "day") ## data distribution over the study is fairly even, except for a gap when there were technological issues with the RFID feeders
+hist(morn_visits$Date, breaks = "day") 
+## data distribution over the study is fairly even, except for a gap when there were technological issues with the RFID feeders
 ```
 
 
@@ -82,9 +80,10 @@ Now that we know our data a little better, let's start by running a simple gener
 glm.1 = glm(formula = sumvisits ~ nightlows, data = morn_visits, family = "poisson")
 summary(glm.1)
 
-# Predictive graph for Temperature
+## Predictive graph for Temperature
 temp <- data.frame(nightlows = seq(min(morn_visits$nightlows),max(morn_visits$nightlows)), by = 0.5, Date = median(morn_visits$Date), RFID = sample(morn_visits$RFID,1), Species = "DOWO", Sex = "M")
-temp$Predict <- predict(glm.1, temp, type = "response") # takes parameters from model and returns values for the response variable
+temp$Predict <- predict(glm.1, temp, type = "response") 
+## takes parameters from model and returns values for the response variable
 plot(temp$nightlows, temp$Predict, xlab = "Nightly Temperature", ylab = "Number of Visits")
 ```
 
@@ -119,11 +118,14 @@ First, to demonstrate the logic behind bootstrapping, let's bootstrap a simple s
 ```{r}
 bootstrap <- function(data, samp_size, calc_statistic, b_iter) {
   boot_statistic <- function() {
-    boot_sample = sample(x = data, size = samp_size, replace = T) ## randomly sample rows with replacement; enter sample values as samp_size, up to the original sample size
-    calc_statistic(boot_sample) ## apply the statistic of interest
+    ## randomly sample rows with replacement; enter sample values as samp_size, up to the original sample size
+    boot_sample = sample(x = data, size = samp_size, replace = T) 
+
+    ## apply the statistic of interest
+    calc_statistic(boot_sample) 
   }
-  
-  replicate(n = b_iter, expr = boot_statistic())  ## perform the bootstrap multiple times by changing b_iter
+## perform the bootstrap multiple times by changing b_iter  
+  replicate(n = b_iter, expr = boot_statistic())  
 }
 set.seed(457)
 sdvals = bootstrap(data=morn_visits$nightlows, samp_size=nrow(morn_visits), calc_statistic=sd, b_iter=1000)
@@ -163,16 +165,22 @@ Now let's apply the same logic to the GLM to get a bootstrapped model parameter 
 
 ```{r}
 library(tidyverse)
-glmdf = data.frame(Estimate = numeric()) ##initialize dataframe for our output parameters
+##initialize dataframe for our output parameters
+glmdf = data.frame(Estimate = numeric()) 
 for(i in 1:1000){
-  sampdata = sample_n(morn_visits, size = nrow(morn_visits), replace = TRUE) ## randomly sample rows with replacement up to the original sample size
-  glm_temp = glm(formula = sumvisits ~ nightlows, data = sampdata, family = "poisson") ## model the effects of interest
-  glmdf = rbind(glmdf, data.frame(Estimate = summary(glm_temp)$coefficients[, 1][2])) ## save the output to our dataframe
+  ## randomly sample rows with replacement up to the original sample size
+  sampdata = sample_n(morn_visits, size = nrow(morn_visits), replace = TRUE) 
+  ## model the effects of interest
+  glm_temp = glm(formula = sumvisits ~ nightlows, data = sampdata, family = "poisson") 
+  ## save the output to our dataframe
+  glmdf = rbind(glmdf, data.frame(Estimate = summary(glm_temp)$coefficients[, 1][2]))
 }
 
-quantile(glmdf$Estimate,probs = c(0.025,0.975)) ## get confidence intervals; cool, they do not overlap with zero! That would mean we cannot reject the null hypothesis--i.e., that there is no relationship between the response and predictor variables
+quantile(glmdf$Estimate,probs = c(0.025,0.975)) 
+## get confidence intervals; cool, they do not overlap with zero! If they did, that would mean we cannot reject the null hypothesis--i.e., that there is no relationship between the response and predictor variables
 
-hist(glmdf$Estimate) ## look at the distribution of the parameter
+hist(glmdf$Estimate) 
+## look at the distribution of the parameter
 
 ```
 
@@ -242,9 +250,9 @@ We can also check model performance by running multiple chains and making sure t
 ```{r}
 library(doParallel)
 library(foreach)
-# Initialize parallel backend
+## Initialize parallel backend
 registerDoParallel(cores = 4)
-# Use foreach to parallelize the loop
+## Use foreach to parallelize the loop
 timestamp()
 set.seed(1)
 glmm.mult <- foreach(i = 1:4, .packages = 'MCMCglmm') %dopar% {
@@ -256,14 +264,46 @@ glmm.mult <- foreach(i = 1:4, .packages = 'MCMCglmm') %dopar% {
              burnin = 8)
 }
 timestamp()
-# Stop parallel backend-- DON'T FORGET TO DO THIS!
+## Stop parallel backend-- DON'T FORGET TO DO THIS!
 stopImplicitCluster()
 
 glmm.mult.1 <- lapply(glmm.mult, function(m) m$Sol)
 glmm.mult.1 <- do.call(mcmc.list, glmm.mult.1)
-## Potential scale reduction factors (PSRF) should be close to one, ideally < 1.2
+```
+
+Potential scale reduction factors (PSRF) should be close to one, ideally < 1.2.
+
+
+```{r}
 gelman.diag(glmm.mult.1)
+```
+
+
+PSRF value is good, now let's look at the chains to make sure they are well mixed. For this plot, no line color should stand out in its own pattern, it should still be super messy, this means the chains all converged on similar answers and that the model fit is good.
+
+
+```{r}
 plot(glmm.mult.1)
+```
+
+
+These look well mixed, so we can be confident that we have a good model fit. MCMC also gives us confidence intervals, so we can also assess the accuracy of our model parameters. We can also use confidence intervals for simple hypothesis testing; i.e., if the parameters overlap with zero, we absolutely cannot reject the null hypothesis, but if not and p-values fall below 0.05, we can reject with relative confidence. FYI the following plot code was adapted from a MCMCglmm tutorial (link at the bottom of the page).
+
+
+```{r}
+  x <- summary(glmm.mult.1)
+  n <- dim(x$statistics)[1]
+  par(mar=c(2, 7, 4, 1))
+  plot(x$statistics[,1], n:1,
+       yaxt="n", ylab="",
+       xlim=range(x$quantiles)*1.2,
+       pch=19,
+       main="Posterior means and 95% credible intervals")
+  grid()
+  axis(2, at=n:1, rownames(x$statistics), las=2)
+  arrows(x$quantiles[,1], n:1, x$quantiles[,5], n:1, code=0)
+  abline(v=0, lty=2)
+
 ```
 
 
