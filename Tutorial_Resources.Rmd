@@ -1,14 +1,10 @@
 ---
 title: "Bootstrap & MCMC Tutorial"
 output:   
-<<<<<<< HEAD
-  github_document
-=======
   html_document:
     toc: true
     toc_float:
       collapsed: false
->>>>>>> 09e6e28219c5773ed94e23251d27e9ee46cbdf93
 ---
 
 ```{r setup, include=FALSE}
@@ -261,9 +257,41 @@ stopImplicitCluster()
 
 glmm.mult.1 <- lapply(glmm.mult, function(m) m$Sol)
 glmm.mult.1 <- do.call(mcmc.list, glmm.mult.1)
-## Potential scale reduction factors (PSRF) should be close to one, ideally < 1.2
+```
+
+Potential scale reduction factors (PSRF) should be close to one, ideally < 1.2.
+
+
+```{r}
 gelman.diag(glmm.mult.1)
+```
+
+
+PSRF value is good, now let's look at the chains to make sure they are well mixed. For this plot, no line color should stand out in its own pattern, it should still be super messy, this means the chains all converged on similar answers and that the model fit is good.
+
+
+```{r}
 plot(glmm.mult.1)
+```
+
+
+These look well mixed, so we can be confident that we have a good model fit. MCMC also gives us confidence intervals, so we can also assess the accuracy of our model parameters. We can also use confidence intervals for simple hypothesis testing; i.e., if the parameters overlap with zero, we absolutely cannot reject the null hypothesis, but if not and p-values fall below 0.05, we can reject with relative confidence. FYI the following plot code was adapted from a MCMCglmm tutorial (link at the bottom of the page).
+
+
+```{r}
+  x <- summary(glmm.mult.1)
+  n <- dim(x$statistics)[1]
+  par(mar=c(2, 7, 4, 1))
+  plot(x$statistics[,1], n:1,
+       yaxt="n", ylab="",
+       xlim=range(x$quantiles)*1.2,
+       pch=19,
+       main="Posterior means and 95% credible intervals")
+  grid()
+  axis(2, at=n:1, rownames(x$statistics), las=2)
+  arrows(x$quantiles[,1], n:1, x$quantiles[,5], n:1, code=0)
+  abline(v=0, lty=2)
+
 ```
 
 
